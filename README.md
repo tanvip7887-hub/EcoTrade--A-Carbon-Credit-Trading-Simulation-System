@@ -229,18 +229,6 @@ After running the project, you will see:
 
 ---
 
-## Team Members
-
-| Name              | Role                  |
-|-------------------|-----------------------|
-| Member 1          | Frontend Development  |
-| Member 2          | Backend Development   |
-| Member 3          | Data Structures & Testing |
-
-*(Update with your actual team member names)*
-
----
-
 ## License
 
 This project is developed for educational purposes as part of the Advanced Data Structures course curriculum.
