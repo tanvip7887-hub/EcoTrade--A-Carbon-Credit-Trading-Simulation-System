@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Building2, ShieldCheck, Leaf, BarChart3, ArrowRightLeft, Info, UserPlus } from 'lucide-react';
+import { Building2, ShieldCheck, Leaf, BarChart3, ArrowRightLeft, Info, UserPlus, Mail, Briefcase } from 'lucide-react';
 import api from '../api';
 
 export default function Login({ onLogin }) {
-  const [view, setView] = useState('login'); // 'login' or 'register'
-  const [tab, setTab] = useState('company'); // 'company' or 'admin'
+  const [view, setView] = useState('login'); 
+  const [tab, setTab] = useState('company'); 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [industry, setIndustry] = useState('Tech');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,13 +50,15 @@ export default function Login({ onLogin }) {
       await api.post('/auth/register', {
         company_id: username,
         name: name,
+        email: email,
+        industry: industry,
         password: password
       });
       setSuccess('Account created! You can now log in.');
       setView('login');
-      setUsername(''); setPassword(''); setName('');
+      setUsername(''); setPassword(''); setName(''); setEmail('');
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed. ID might be taken.');
+      setError(err.response?.data?.error || 'Registration failed. ID or Email might be taken.');
     } finally {
       setLoading(false);
     }
@@ -166,28 +170,67 @@ export default function Login({ onLogin }) {
               {error && <div className="alert alert-error"><Info size={16} /> {error}</div>}
 
               <form onSubmit={handleRegister} style={{ marginTop: 20 }}>
-                <div className="form-group" style={{ marginBottom: 14 }}>
-                  <label className="form-label">Company ID</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. C007"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="form-group" style={{ marginBottom: 14 }}>
+                    <label className="form-label">Company ID</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. C007"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 14 }}>
+                    <label className="form-label">Company Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. EcoCorp"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
+
                 <div className="form-group" style={{ marginBottom: 14 }}>
-                  <label className="form-label">Company Name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. GreenTech Industries"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
+                  <label className="form-label">Email Address</label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input
+                      type="email"
+                      className="form-control"
+                      style={{ paddingLeft: 40 }}
+                      placeholder="contact@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
+
+                <div className="form-group" style={{ marginBottom: 14 }}>
+                  <label className="form-label">Industry</label>
+                  <div style={{ position: 'relative' }}>
+                    <Briefcase size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <select
+                      className="form-control"
+                      style={{ paddingLeft: 40 }}
+                      value={industry}
+                      onChange={(e) => setIndustry(e.target.value)}
+                    >
+                      <option value="Tech">Technology</option>
+                      <option value="Energy">Energy</option>
+                      <option value="Manufacturing">Manufacturing</option>
+                      <option value="Logistics">Logistics</option>
+                      <option value="Finance">Finance</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="form-group" style={{ marginBottom: 20 }}>
                   <label className="form-label">Password</label>
                   <input
