@@ -53,7 +53,9 @@ def login():
 @main_bp.route('/companies', methods=['GET', 'POST'])
 @jwt_required()
 def handle_companies():
-    if get_jwt_identity() != 'admin': return jsonify({'error': 'Admin only'}), 403
+    # POST is for creating/updating, which is Admin only
+    if request.method == 'POST' and get_jwt_identity() != 'admin':
+        return jsonify({'error': 'Admin only'}), 403
     
     if request.method == 'POST':
             
