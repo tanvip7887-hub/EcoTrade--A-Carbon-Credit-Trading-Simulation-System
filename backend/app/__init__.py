@@ -12,7 +12,8 @@ def create_app():
     
     # Configuration
     basedir = os.path.abspath(os.path.dirname(__file__))
-    db_path = os.path.join(os.path.dirname(basedir), 'ecotrade.db')
+    # Force DB to be in the project root folder (next to backend/ and frontend-react/)
+    db_path = os.path.join(os.path.dirname(os.path.dirname(basedir)), 'ecotrade.db')
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key')
