@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { History as HistoryIcon, Search, CheckCircle, RotateCcw, Filter } from 'lucide-react';
+import api from '../api';
+import { History as HistoryIcon, Search, CheckCircle, RotateCcw, Filter, ArrowRightLeft } from 'lucide-react';
 
 export default function History() {
   const [history, setHistory] = useState([]);
@@ -9,7 +9,7 @@ export default function History() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('http://127.0.0.1:5000/api/history').then(r => {
+    api.get('/history').then(r => {
       setHistory(r.data);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -22,30 +22,31 @@ export default function History() {
   });
 
   return (
-    <div>
+    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
       <div className="card">
         <div className="card-header">
           <div>
             <div className="card-title"><HistoryIcon size={18} /> Transaction Logs</div>
-            <div className="card-subtitle">Data Structure: Queue (FIFO) — most recent trades appear last</div>
+            <div className="card-subtitle">Data Structure: Queue (FIFO) — most recent trades appear first</div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span className="badge badge-blue">{filtered.length} records</span>
+            <span style={{ backgroundColor: '#eff6ff', color: '#1e40af', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600 }}>
+              {filtered.length} records
+            </span>
           </div>
         </div>
 
-        {/* Search & Filter */}
-        <div className="filter-bar">
-          <div className="search-input-wrap">
-            <Search size={15} className="search-icon" />
+        <div className="filter-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, gap: 16 }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
-              className="search-input"
+              style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.9rem' }}
               placeholder="Search by company ID..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <div className="pill-tabs" style={{ marginBottom: 0 }}>
+          <div className="pill-tabs" style={{ marginBottom: 0, background: '#f8fafc', padding: '4px', borderRadius: '10px' }}>
             {['all', 'trade', 'undo'].map(f => (
               <button key={f} className={`pill-tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
                 {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -55,16 +56,16 @@ export default function History() {
         </div>
 
         {loading ? (
-          <p style={{ color: '#64748b', padding: '20px 0' }}>Loading...</p>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>Loading history...</div>
         ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <HistoryIcon size={40} />
-            <h3>No Records Found</h3>
-            <p>No trade history matches your current filter.</p>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
+            <HistoryIcon size={40} style={{ marginBottom: 16, opacity: 0.5 }} />
+            <h3 style={{ margin: 0, color: '#64748b' }}>No Records Found</h3>
+            <p style={{ fontSize: '0.9rem' }}>No trade history matches your current search or filter.</p>
           </div>
         ) : (
-          <div className="table-wrapper">
-            <table>
+          <div className="table-container">
+            <table className="table">
               <thead>
                 <tr>
                   <th>#</th>
@@ -78,20 +79,28 @@ export default function History() {
               <tbody>
                 {filtered.map((h, i) => (
                   <tr key={i}>
-                    <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{i + 1}</td>
+                    <td style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{i + 1}</td>
                     <td>
                       {h.type === 'Undo'
-                        ? <span className="badge badge-orange" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><RotateCcw size={11} /> Undo</span>
-                        : <span className="badge badge-blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowRightLeft size={11} /> Trade</span>
+                        ? <span style={{ backgroundColor: '#fff7ed', color: '#c2410c', padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <RotateCcw size={10} /> UNDO
+                          </span>
+                        : <span style={{ backgroundColor: '#eff6ff', color: '#1e40af', padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <ArrowRightLeft size={10} /> TRADE
+                          </span>
                       }
                     </td>
                     <td style={{ fontWeight: 600 }}>{h.seller}</td>
                     <td style={{ fontWeight: 600 }}>{h.buyer}</td>
-                    <td><strong>{h.amount}</strong> CR</td>
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>{h.amount} CR</td>
                     <td>
-                      <span className={`badge ${h.status === 'completed' ? 'badge-green' : 'badge-orange'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <CheckCircle size={11} />
-                        {h.status.charAt(0).toUpperCase() + h.status.slice(1)}
+                      <span style={{ 
+                        backgroundColor: h.status === 'completed' ? '#f0fdf4' : '#fff7ed', 
+                        color: h.status === 'completed' ? '#16a34a' : '#c2410c',
+                        padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 700,
+                        display: 'inline-flex', alignItems: 'center', gap: 4
+                      }}>
+                        <CheckCircle size={10} /> {h.status.toUpperCase()}
                       </span>
                     </td>
                   </tr>
@@ -102,14 +111,5 @@ export default function History() {
         )}
       </div>
     </div>
-  );
-}
-
-function ArrowRightLeft({ size }) {
-  return (
-    <svg width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M8 3L4 7l4 4" /><path d="M4 7h16" />
-      <path d="M16 21l4-4-4-4" /><path d="M20 17H4" />
-    </svg>
   );
 }

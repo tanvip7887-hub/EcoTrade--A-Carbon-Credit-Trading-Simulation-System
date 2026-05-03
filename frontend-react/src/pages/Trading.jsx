@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api';
 import { ArrowRightLeft, RotateCcw, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
 export default function Trading({ user }) {
@@ -12,8 +12,15 @@ export default function Trading({ user }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    axios.get('http://127.0.0.1:5000/api/companies').then(r => setCompanies(r.data));
-  }, [message]); // reload after trade
+    fetchCompanies();
+  }, []);
+
+  async function fetchCompanies() {
+    try {
+      const res = await api.get('/companies');
+      setCompanies(res.data);
+    } catch (e) { console.error(e); }
+  }
 
   const sellerComp = companies.find(c => c.company_id === sellerId);
   const buyerComp  = companies.find(c => c.company_id === buyerId);
@@ -23,13 +30,14 @@ export default function Trading({ user }) {
     setMessage(''); setError(''); setLoading(true);
     if (sellerId === buyerId) { setError('Seller and Buyer cannot be the same company.'); setLoading(false); return; }
     try {
-      const res = await axios.post('http://127.0.0.1:5000/api/trade', {
+      const res = await api.post('/trade', {
         seller_id: sellerId, buyer_id: buyerId, amount: parseFloat(amount)
       });
       setMessage(res.data.message);
       setAmount('');
       if (user.role === 'admin') { setSellerId(''); setBuyerId(''); }
       else setBuyerId('');
+      fetchCompanies(); // Refresh balances
     } catch (err) {
       setError(err.response?.data?.error || 'Trade failed');
     }
@@ -39,15 +47,16 @@ export default function Trading({ user }) {
   const handleUndo = async () => {
     setMessage(''); setError('');
     try {
-      const res = await axios.post('http://127.0.0.1:5000/api/trade/undo');
+      const res = await api.post('/trade/undo');
       setMessage(res.data.message);
+      fetchCompanies(); // Refresh balances
     } catch (err) {
       setError(err.response?.data?.error || 'Nothing to undo');
     }
   };
 
   return (
-    <div style={{ maxWidth: 740, margin: '0 auto' }}>
+    <div style={{ maxWidth: 740, margin: '0 auto', animation: 'fadeIn 0.5s ease-out' }}>
       <div className="card">
         <div className="card-header">
           <div>
@@ -61,8 +70,8 @@ export default function Trading({ user }) {
           )}
         </div>
 
-        {message && <div className="alert alert-success"><CheckCircle size={16} /> {message}</div>}
-        {error   && <div className="alert alert-error"><AlertCircle size={16} /> {error}</div>}
+        {message && <div className="alert alert-success" style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}><CheckCircle size={16} /> {message}</div>}
+        {error   && <div className="alert alert-error" style={{ backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}><AlertCircle size={16} /> {error}</div>}
 
         <form onSubmit={handleTrade}>
           <div className="form-grid" style={{ marginBottom: 16 }}>
@@ -115,7 +124,6 @@ export default function Trading({ user }) {
             />
           </div>
 
-          {/* Live preview cards */}
           {(sellerComp || buyerComp) && (
             <div className="form-grid" style={{ marginBottom: 20 }}>
               {sellerComp && (
@@ -153,17 +161,16 @@ export default function Trading({ user }) {
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-            <ArrowRightLeft size={17} />
+          <button type="submit" className="btn btn-primary btn-full" disabled={loading} style={{ padding: '14px' }}>
+            <ArrowRightLeft size={17} style={{ marginRight: 8 }} />
             {loading ? 'Processing...' : 'Execute Trade'}
           </button>
         </form>
       </div>
 
-      {/* Info cards */}
       <div className="form-grid">
         <div className="card" style={{ marginBottom: 0 }}>
-          <div className="card-title" style={{ marginBottom: 10, fontSize: '0.88rem' }}>
+          <div className="card-title" style={{ marginBottom: 10, fontSize: '0.88rem', color: '#1e3a8a' }}>
             <Info size={16} /> How Trading Works
           </div>
           <ol style={{ paddingLeft: 18, fontSize: '0.82rem', color: '#64748b', lineHeight: 1.8 }}>
@@ -174,7 +181,7 @@ export default function Trading({ user }) {
           </ol>
         </div>
         <div className="card" style={{ marginBottom: 0 }}>
-          <div className="card-title" style={{ marginBottom: 10, fontSize: '0.88rem' }}>
+          <div className="card-title" style={{ marginBottom: 10, fontSize: '0.88rem', color: '#1e3a8a' }}>
             <Info size={16} /> Data Structures in Use
           </div>
           <div style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.9 }}>

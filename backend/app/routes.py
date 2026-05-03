@@ -51,10 +51,11 @@ def login():
     return jsonify({"msg": "Invalid credentials"}), 401
 
 @main_bp.route('/companies', methods=['GET', 'POST'])
+@jwt_required()
 def handle_companies():
+    if get_jwt_identity() != 'admin': return jsonify({'error': 'Admin only'}), 403
+    
     if request.method == 'POST':
-        verify_jwt_in_request()
-        if get_jwt_identity() != 'admin': return jsonify({'error': 'Admin only'}), 403
             
         data = request.json
         comp_id = data.get('company_id')
