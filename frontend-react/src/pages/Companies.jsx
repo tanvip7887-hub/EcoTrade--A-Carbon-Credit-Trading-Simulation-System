@@ -1,22 +1,22 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { Building2, PlusCircle, Search, CheckCircle, AlertCircle, Info, User, Shield, Briefcase, Eye } from 'lucide-react';
+import { Building2, PlusCircle, Search, CheckCircle, AlertCircle, Eye, Shield, Key, UserCheck } from 'lucide-react';
 
 const EcoScoreTag = ({ score }) => {
   const getStyle = (s) => {
-    if (s >= 90) return { bg: '#ecfdf5', text: '#059669', label: 'A+' };
-    if (s >= 80) return { bg: '#f0fdf4', text: '#16a34a', label: 'A' };
-    if (s >= 60) return { bg: '#fffbeb', text: '#d97706', label: 'B' };
-    return { bg: '#fef2f2', text: '#dc2626', label: 'C' };
+    if (s >= 90) return { bg: '#ecfdf5', text: '#059669', label: 'Excellent' };
+    if (s >= 70) return { bg: '#f0fdf4', text: '#16a34a', label: 'Good' };
+    if (s >= 50) return { bg: '#fffbeb', text: '#d97706', label: 'Fair' };
+    return { bg: '#fef2f2', text: '#dc2626', label: 'Critical' };
   };
   const style = getStyle(score);
   return (
     <span style={{ 
-      backgroundColor: style.bg, color: style.text, padding: '4px 10px', 
-      borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, 
-      display: 'inline-flex', alignItems: 'center', gap: 4 
+      backgroundColor: style.bg, color: style.text, padding: '4px 12px', 
+      borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700, 
+      display: 'inline-flex', alignItems: 'center', gap: 4, textTransform: 'uppercase'
     }}>
-      <Shield size={12} /> {style.label} ({score})
+      <Shield size={10} /> {style.label}
     </span>
   );
 };
@@ -24,7 +24,6 @@ const EcoScoreTag = ({ score }) => {
 export default function Companies() {
   const [companies, setCompanies] = useState([]);
   const [search, setSearch] = useState('');
-  const [filterInd, setFilterInd] = useState('all');
   const [formData, setFormData] = useState({ id: '', name: '', password: '', emissions: '', credits: '', industry: 'Tech' });
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -49,9 +48,12 @@ export default function Companies() {
         name: existing.name,
         emissions: existing.emissions.toString(),
         credits: existing.credits_allocated.toString(),
-        industry: existing.industry
+        industry: existing.industry,
+        password: existing.password
       });
-      setMsg(`Loaded data for ${existing.name}.`);
+      setMsg(`System: Data loaded for ${existing.name}`);
+    } else {
+      setErr('No company found with this ID');
     }
   };
 
@@ -63,66 +65,72 @@ export default function Companies() {
         company_id: formData.id,
         name: formData.name,
         password: formData.password,
-        emissions: parseFloat(formData.emissions),
-        credits_allocated: parseFloat(formData.credits),
+        emissions: parseFloat(formData.emissions || 0),
+        credits_allocated: parseFloat(formData.credits || 0),
         industry: formData.industry
       });
-      setMsg(`Company updated successfully.`);
+      setMsg(`Success: ${formData.id} has been processed.`);
       fetchCompanies();
-    } catch (err) { setErr(err.response?.data?.error || 'Error saving.'); }
+    } catch (err) { setErr(err.response?.data?.error || 'Database operation failed.'); }
     setLoading(false);
   };
 
   const filtered = companies.filter(c => {
     const s = search.toLowerCase();
-    return (!s || c.name.toLowerCase().includes(s) || c.company_id.toLowerCase().includes(s)) && 
-           (filterInd === 'all' || c.industry === filterInd);
+    return !s || c.name.toLowerCase().includes(s) || c.company_id.toLowerCase().includes(s);
   });
 
   return (
-    <div>
-      <div className="card">
-        <div className="card-header"><PlusCircle size={18} /> Register / Update Company</div>
-        {msg && <div className="alert alert-success">{msg}</div>}
+    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
+      <div className="card" style={{ borderTop: '4px solid #0f172a' }}>
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div className="card-title"><UserCheck size={18} /> Government Credit Allocation</div>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setFormData({ id: '', name: '', password: '', emissions: '', credits: '', industry: 'Tech' })}>Reset Form</button>
+        </div>
+        
+        {msg && <div className="alert alert-success" style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>{msg}</div>}
         {err && <div className="alert alert-error">{err}</div>}
+        
         <form onSubmit={handleRegister}>
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">Company ID</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input type="text" className="form-control" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} required />
-                <button type="button" className="btn btn-secondary btn-sm" onClick={handleLookup} disabled={!companies.some(c => c.company_id === formData.id)}>Load</button>
+              <label className="form-label">Search / Enter Company ID</label>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <input type="text" className="form-control" placeholder="e.g. C001" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} required />
+                <button type="button" className="btn btn-primary" onClick={handleLookup} disabled={!formData.id}>Load</button>
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">Company Name</label>
+              <label className="form-label">Full Legal Name</label>
               <input type="text" className="form-control" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
             </div>
             <div className="form-group">
-              <label className="form-label">Credits Allocated</label>
+              <label className="form-label">Official Credit Allocation (Tons)</label>
               <input type="number" className="form-control" value={formData.credits} onChange={e => setFormData({ ...formData, credits: e.target.value })} required />
             </div>
             <div className="form-group">
-              <label className="form-label">Login Password</label>
-              <input type="password" className="form-control" placeholder="Optional for updates" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+              <label className="form-label">Assign Password</label>
+              <input type="text" className="form-control" placeholder="Create or Update Password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
             </div>
           </div>
-          <button type="submit" className="btn btn-primary" style={{ marginTop: 16 }} disabled={loading}>{loading ? 'Saving...' : 'Register / Update Company'}</button>
+          <button type="submit" className="btn btn-primary" style={{ marginTop: 24, padding: '12px 24px' }} disabled={loading}>
+            {loading ? 'Processing...' : 'Authorize & Allocate Credits'}
+          </button>
         </form>
       </div>
 
       <div className="card">
-        <div className="card-header"><Building2 size={18} /> Registered Companies</div>
+        <div className="card-header"><Building2 size={18} /> Authorized Entity Registry</div>
         <div className="table-container">
           <table className="table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Company</th>
-                <th>Industry</th>
-                <th>Eco-Score</th>
+                <th>Entity ID</th>
+                <th>Company Name</th>
+                <th>Compliance Status</th>
                 <th>Emissions</th>
-                <th>Action</th>
+                <th>Balance</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -130,12 +138,12 @@ export default function Companies() {
                 <tr key={c.company_id}>
                   <td><code>{c.company_id}</code></td>
                   <td style={{ fontWeight: 600 }}>{c.name}</td>
-                  <td>{c.industry}</td>
                   <td><EcoScoreTag score={c.eco_score} /></td>
-                  <td>{c.emissions} Tons</td>
+                  <td>{c.emissions} T</td>
+                  <td style={{ color: c.credits_balance >= 0 ? '#10b981' : '#dc2626', fontWeight: 700 }}>{c.credits_balance}</td>
                   <td>
                     <button className="btn btn-secondary btn-sm" onClick={() => { setSelectedComp(c); setShowModal(true); }}>
-                      <Eye size={14} /> View
+                      <Eye size={14} /> View Details
                     </button>
                   </td>
                 </tr>
@@ -146,21 +154,31 @@ export default function Companies() {
       </div>
 
       {showModal && selectedComp && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div className="card" style={{ width: '100%', maxWidth: 500, marginBottom: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}><User size={20} /> Company Profile</h3>
-              <button onClick={() => setShowModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>✕</button>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+          <div className="card" style={{ width: '100%', maxWidth: 450, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24, borderBottom: '1px solid #f1f5f9', paddingBottom: 16 }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 12, color: '#0f172a' }}><Shield size={22} color="#3b82f6" /> Entity Passport</h3>
+              <button onClick={() => setShowModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.2rem' }}>✕</button>
             </div>
-            <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0' }}>
-              <p><strong>Name:</strong> {selectedComp.name}</p>
-              <p><strong>ID:</strong> {selectedComp.company_id}</p>
-              <p><strong>Industry:</strong> {selectedComp.industry}</p>
-              <p><strong>Allocated Credits:</strong> {selectedComp.credits_allocated}</p>
-              <p><strong>Current Balance:</strong> {selectedComp.credits_balance}</p>
-              <p><strong>Password:</strong> <code>{selectedComp.password}</code></p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: '#f8fafc', borderRadius: 8 }}>
+                <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Full Name</span>
+                <span style={{ fontWeight: 600, color: '#0f172a' }}>{selectedComp.name}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: '#f8fafc', borderRadius: 8 }}>
+                <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Access ID</span>
+                <code style={{ color: '#3b82f6' }}>{selectedComp.company_id}</code>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: '#f8fafc', borderRadius: 8 }}>
+                <span style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}><Key size={14} /> Login Password</span>
+                <code style={{ backgroundColor: '#f1f5f9', padding: '2px 8px', borderRadius: 4 }}>{selectedComp.password}</code>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: '#f8fafc', borderRadius: 8 }}>
+                <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Allocated Credits</span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{selectedComp.credits_allocated} T</span>
+              </div>
             </div>
-            <button className="btn btn-primary" style={{ width: '100%', marginTop: 20 }} onClick={() => setShowModal(false)}>Close Passport</button>
+            <button className="btn btn-primary" style={{ width: '100%', marginTop: 32, padding: '14px' }} onClick={() => setShowModal(false)}>Close Passport</button>
           </div>
         </div>
       )}

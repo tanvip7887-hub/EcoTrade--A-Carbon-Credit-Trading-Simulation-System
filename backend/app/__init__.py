@@ -1,6 +1,5 @@
 from flask import Flask
 from flask_cors import CORS
-from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from .models import db
 import os
@@ -21,7 +20,6 @@ def create_app():
     # Initialize Extensions
     db.init_app(app)
     CORS(app)
-    Migrate(app, db)
     JWTManager(app)
     
     # Register Blueprints
