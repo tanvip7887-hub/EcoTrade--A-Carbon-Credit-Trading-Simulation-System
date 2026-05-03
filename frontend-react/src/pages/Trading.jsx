@@ -1,25 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { ArrowRightLeft, CheckCircle, AlertCircle, Info, ShoppingBag, Send, TrendingDown, TrendingUp, Shield } from 'lucide-react';
-
-const ComplianceBadge = ({ score }) => {
-  const getStyle = (s) => {
-    if (s >= 90) return { bg: '#ecfdf5', text: '#059669', label: 'Excellent' };
-    if (s >= 70) return { bg: '#f0fdf4', text: '#16a34a', label: 'Good' };
-    return { bg: '#fef2f2', text: '#dc2626', label: 'Critical' };
-  };
-  const style = getStyle(score || 0);
-  return (
-    <span style={{ backgroundColor: style.bg, color: style.text, padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 700 }}>
-      {style.label}
-    </span>
-  );
-};
+import { ArrowRightLeft, CheckCircle, AlertCircle, Info, ShoppingBag, Send, TrendingDown, TrendingUp, RotateCcw, Hash, Layers, Share2, ClipboardList } from 'lucide-react';
 
 export default function Trading({ user }) {
   const [companies, setCompanies] = useState([]);
-  const [mode, setMode] = useState('sell'); // 'sell' or 'buy'
-  const [partnerId, setPartnerId] = useState('');
+  const [mode, setMode] = useState('sell'); // For companies
+  const [sellerId, setSellerId] = useState('');
+  const [buyerId, setBuyerId] = useState('');
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -34,71 +21,171 @@ export default function Trading({ user }) {
     } catch (e) { console.error(e); }
   }
 
-  const partners = companies.filter(c => c.company_id !== user.id);
-  const myData = companies.find(c => c.company_id === user.id) || {};
-  const partnerData = partners.find(c => c.company_id === partnerId) || null;
-
-  const tradeAmount = parseFloat(amount || 0);
-  
-  // Projection Logic
-  const myProjected = mode === 'sell' ? (myData.credits_balance - tradeAmount) : (myData.credits_balance + tradeAmount);
-  const partnerProjected = mode === 'sell' ? (partnerData?.credits_balance + tradeAmount) : (partnerData?.credits_balance - tradeAmount);
-
   const handleTrade = async (e) => {
     e.preventDefault();
     setMessage(''); setError(''); setLoading(true);
     
-    const tradeData = {
-      seller_id: mode === 'sell' ? user.id : partnerId,
-      buyer_id: mode === 'sell' ? partnerId : user.id,
-      amount: tradeAmount
-    };
+    // Determine parties
+    const sId = user.role === 'admin' ? sellerId : (mode === 'sell' ? user.id : sellerId);
+    const bId = user.role === 'admin' ? buyerId : (mode === 'sell' ? buyerId : user.id);
 
     try {
-      const res = await api.post('/trade', tradeData);
-      setMessage(res.data.message || 'Trade executed successfully!');
-      setAmount(''); setPartnerId('');
+      const res = await api.post('/trade', { seller_id: sId, buyer_id: bId, amount: parseFloat(amount) });
+      setMessage(res.data.message || 'Trade successful');
+      setAmount(''); setSellerId(''); setBuyerId('');
       fetchCompanies();
     } catch (err) {
-      setError(err.response?.data?.error || 'Trade failed. Check balances.');
+      setError(err.response?.data?.error || 'Trade failed.');
     }
     setLoading(false);
   };
 
+  const handleUndo = async () => {
+    try {
+      const res = await api.post('/trade/undo');
+      setMessage(res.data.message || 'Last trade reverted successfully');
+      fetchCompanies();
+    } catch (err) { setError(err.response?.data?.error || 'No trades to undo.'); }
+  };
+
+  const tradeAmount = parseFloat(amount || 0);
+  const sellerData = companies.find(c => c.company_id === (user.role === 'admin' ? sellerId : (mode === 'sell' ? user.id : sellerId)));
+  const buyerData = companies.find(c => c.company_id === (user.role === 'admin' ? buyerId : (mode === 'sell' ? buyerId : user.id)));
+
+  // If user is company, we filter partners for the partner dropdown
+  const partners = companies.filter(c => c.company_id !== user.id);
+
+  if (user.role === 'admin') {
+    return (
+      <div style={{ maxWidth: 1000, margin: '0 auto', animation: 'fadeIn 0.5s ease-out' }}>
+        <div className="card" style={{ padding: '32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+            <div>
+              <div className="card-title" style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <ArrowRightLeft size={22} color="#1e3a8a" /> Execute Carbon Credit Trade
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: 4 }}>
+                Data Structure: Queue logs trades, Stack enables undo
+              </div>
+            </div>
+            <button onClick={handleUndo} className="btn" style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 16px', fontWeight: 600 }}>
+              <RotateCcw size={16} /> Undo Last Trade
+            </button>
+          </div>
+
+          {message && <div className="alert alert-success" style={{ marginBottom: 24 }}><CheckCircle size={16} /> {message}</div>}
+          {error && <div className="alert alert-error" style={{ marginBottom: 24 }}><AlertCircle size={16} /> {error}</div>}
+
+          <form onSubmit={handleTrade}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 700 }}>Seller Company</label>
+                <select className="form-control" value={sellerId} onChange={e => setSellerId(e.target.value)} required>
+                  <option value="">Select seller...</option>
+                  {companies.map(c => <option key={c.company_id} value={c.company_id}>{c.name} ({c.company_id})</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 700 }}>Buyer Company</label>
+                <select className="form-control" value={buyerId} onChange={e => setBuyerId(e.target.value)} required>
+                  <option value="">Select buyer...</option>
+                  {companies.map(c => <option key={c.company_id} value={c.company_id}>{c.name} ({c.company_id})</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 24 }}>
+              <label className="form-label" style={{ fontWeight: 700 }}>Amount of Credits to Transfer</label>
+              <input type="number" className="form-control" value={amount} onChange={e => setAmount(e.target.value)} placeholder="e.g. 200" required />
+            </div>
+
+            {(sellerData || buyerData) && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+                <div style={{ padding: 20, background: '#fff1f2', borderRadius: 12, border: '1px solid #fecaca' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', marginBottom: 4 }}>Seller</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>{sellerData?.name || '...'}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Current Balance: <span style={{ fontWeight: 600 }}>{sellerData?.credits_balance || 0}</span></div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b' }}>After Trade: <span style={{ color: '#dc2626', fontWeight: 800 }}>{(sellerData?.credits_balance || 0) - tradeAmount}</span></div>
+                </div>
+                <div style={{ padding: 20, background: '#f0fdf4', borderRadius: 12, border: '1px solid #bbf7d0' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', marginBottom: 4 }}>Buyer</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>{buyerData?.name || '...'}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Current Balance: <span style={{ fontWeight: 600 }}>{buyerData?.credits_balance || 0}</span></div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b' }}>After Trade: <span style={{ color: '#16a34a', fontWeight: 800 }}>{(buyerData?.credits_balance || 0) + tradeAmount}</span></div>
+                </div>
+              </div>
+            )}
+
+            <button type="submit" className="btn btn-primary btn-full" style={{ padding: '14px', background: '#1e3a8a' }}>
+              <ArrowRightLeft size={18} /> Execute Trade
+            </button>
+          </form>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginTop: 24 }}>
+          <div className="card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <Info size={18} color="#1e3a8a" />
+              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>How Trading Works</div>
+            </div>
+            <ol style={{ fontSize: '0.8rem', color: '#475569', paddingLeft: 20, lineHeight: 1.6 }}>
+              <li>Select a seller company with surplus credits.</li>
+              <li>Select a buyer company that needs credits.</li>
+              <li>Enter the number of credits to transfer.</li>
+              <li>Click Execute Trade to process.</li>
+            </ol>
+          </div>
+          <div className="card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <Share2 size={18} color="#1e3a8a" />
+              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Data Structures in Use</div>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <span className="badge" style={{ background: '#eff6ff', color: '#1e3a8a' }}><Hash size={12} /> Hash Table: Fast O(1) lookup</span>
+              <span className="badge" style={{ background: '#f0fdf4', color: '#16a34a' }}><ClipboardList size={12} /> Queue: FIFO trade logging</span>
+              <span className="badge" style={{ background: '#fef2f2', color: '#dc2626' }}><Layers size={12} /> Stack: LIFO undo operations</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Company View (Tabs)
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', animation: 'fadeIn 0.5s ease-out' }}>
-      <div className="card" style={{ borderTop: '4px solid #1e3a8a' }}>
+    <div style={{ maxWidth: 800, margin: '0 auto', animation: 'fadeIn 0.5s ease-out' }}>
+      <div className="card">
         <div className="card-header" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
           <div>
             <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ArrowRightLeft size={18} color="#1e3a8a" /> Credit Marketplace
+              <ArrowRightLeft size={18} color="#1e3a8a" /> Trade Marketplace
             </div>
-            <div className="card-subtitle">Manage trades for <span style={{ color: '#1e3a8a', fontWeight: 700 }}>{user.name}</span></div>
+            <div className="card-subtitle">Logged in as: <span style={{ color: '#1e3a8a', fontWeight: 700 }}>{user.name}</span></div>
           </div>
           
           <div className="pill-tabs" style={{ background: '#f8fafc', padding: '4px', borderRadius: '12px' }}>
-            <button className={`pill-tab ${mode === 'sell' ? 'active' : ''}`} onClick={() => { setMode('sell'); setPartnerId(''); setMessage(''); setError(''); }}>
+            <button className={`pill-tab ${mode === 'sell' ? 'active' : ''}`} onClick={() => { setMode('sell'); setSellerId(''); setBuyerId(''); setMessage(''); }}>
               <Send size={14} style={{ marginRight: 6 }} /> Sell Credits
             </button>
-            <button className={`pill-tab ${mode === 'buy' ? 'active' : ''}`} onClick={() => { setMode('buy'); setPartnerId(''); setMessage(''); setError(''); }}>
+            <button className={`pill-tab ${mode === 'buy' ? 'active' : ''}`} onClick={() => { setMode('buy'); setSellerId(''); setBuyerId(''); setMessage(''); }}>
               <ShoppingBag size={14} style={{ marginRight: 6 }} /> Buy Credits
             </button>
           </div>
         </div>
 
         <div style={{ padding: '24px 0' }}>
-          {message && <div className="alert alert-success" style={{ marginBottom: 20 }}>{message}</div>}
-          {error && <div className="alert alert-error" style={{ marginBottom: 20 }}>{error}</div>}
+          {message && <div className="alert alert-success" style={{ marginBottom: 20 }}><CheckCircle size={16} /> {message}</div>}
+          {error && <div className="alert alert-error" style={{ marginBottom: 20 }}><AlertCircle size={16} /> {error}</div>}
 
           <form onSubmit={handleTrade}>
             <div className="form-grid">
               <div className="form-group">
                 <label className="form-label">{mode === 'sell' ? 'Who is buying from you?' : 'Who are you buying from?'}</label>
-                <select className="form-control" value={partnerId} onChange={e => setPartnerId(e.target.value)} required>
+                <select className="form-control" value={mode === 'sell' ? buyerId : sellerId} onChange={e => mode === 'sell' ? setBuyerId(e.target.value) : setSellerId(e.target.value)} required>
                   <option value="">Select Company...</option>
                   {partners.map(c => (
                     <option key={c.company_id} value={c.company_id}>
-                      {c.name} (Balance: {c.credits_balance} T | Emissions: {c.emissions} T)
+                      {c.name} (Balance: {c.credits_balance} T)
                     </option>
                   ))}
                 </select>
@@ -109,63 +196,33 @@ export default function Trading({ user }) {
               </div>
             </div>
 
-            {partnerData && (
-              <div style={{ marginTop: 32, animation: 'slideUp 0.4s ease-out' }}>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Transaction Intelligence Preview
-                </h4>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  {/* Your Account Preview */}
-                  <div style={{ padding: 20, background: '#f8fafc', borderRadius: 16, border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Your Account (You)</span>
-                      <ComplianceBadge score={myData.eco_score} />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>{myData.credits_balance} T</div>
-                      <ArrowRightLeft size={14} color="#94a3b8" />
-                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: mode === 'sell' ? '#dc2626' : '#16a34a' }}>
-                        {myProjected} T
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 4 }}>
-                      {mode === 'sell' ? 'Credits will be deducted' : 'Credits will be added'}
-                    </div>
-                  </div>
-
-                  {/* Partner Account Preview */}
-                  <div style={{ padding: 20, background: '#f8fafc', borderRadius: 16, border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>{partnerData.name} ({mode === 'sell' ? 'Buyer' : 'Seller'})</span>
-                      <ComplianceBadge score={partnerData.eco_score} />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>{partnerData.credits_balance} T</div>
-                      <ArrowRightLeft size={14} color="#94a3b8" />
-                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: mode === 'sell' ? '#16a34a' : '#dc2626' }}>
-                        {partnerProjected} T
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 4 }}>
-                      {mode === 'sell' ? 'Credits will be added' : 'Credits will be deducted'}
+            {(sellerData || buyerData) && (
+              <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div style={{ padding: 20, background: '#f8fafc', borderRadius: 16, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: 8 }}>Your Account</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>{mode === 'sell' ? sellerData?.credits_balance : buyerData?.credits_balance} T</div>
+                    <ArrowRightLeft size={14} color="#94a3b8" />
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: mode === 'sell' ? '#dc2626' : '#16a34a' }}>
+                      {mode === 'sell' ? (sellerData?.credits_balance - tradeAmount) : (buyerData?.credits_balance + tradeAmount)} T
                     </div>
                   </div>
                 </div>
-
-                <div style={{ marginTop: 24, padding: 16, background: mode === 'sell' ? '#fff7f7' : '#f0fdf4', borderRadius: 12, border: `1px solid ${mode === 'sell' ? '#fecaca' : '#bbf7d0'}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  {mode === 'sell' ? <TrendingDown size={18} color="#dc2626" /> : <TrendingUp size={18} color="#16a34a" />}
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: mode === 'sell' ? '#991b1b' : '#166534' }}>
-                    {mode === 'sell' 
-                      ? `Security Check: You are authorizing the transfer of ${tradeAmount} T to ${partnerData.name}.` 
-                      : `Security Check: You are requesting to purchase ${tradeAmount} T from ${partnerData.name}.`}
-                  </span>
+                <div style={{ padding: 20, background: '#f8fafc', borderRadius: 16, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: 8 }}>Partner Account</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>{mode === 'sell' ? buyerData?.credits_balance : sellerData?.credits_balance} T</div>
+                    <ArrowRightLeft size={14} color="#94a3b8" />
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: mode === 'sell' ? '#16a34a' : '#dc2626' }}>
+                      {mode === 'sell' ? ((buyerData?.credits_balance || 0) + tradeAmount) : ((sellerData?.credits_balance || 0) - tradeAmount)} T
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
-            <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: 32, padding: '16px', background: '#1e3a8a', fontSize: '1rem' }} disabled={loading || !partnerId || tradeAmount <= 0}>
-              {loading ? 'Processing...' : mode === 'sell' ? `Sell ${tradeAmount} Credits Now` : `Purchase ${tradeAmount} Credits Now`}
+            <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: 32, padding: '16px', background: '#1e3a8a' }}>
+              {mode === 'sell' ? 'Confirm Sale' : 'Confirm Purchase'}
             </button>
           </form>
         </div>
