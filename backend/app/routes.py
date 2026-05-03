@@ -69,9 +69,18 @@ def handle_companies():
             comp.name = data.get('name', comp.name)
             msg = f"Allocation updated for {comp_id}."
 
-        comp.emissions = float(data.get('emissions', comp.emissions))
-        comp.credits_allocated = float(data.get('credits_allocated', comp.credits_allocated))
-        comp.credits_balance = comp.credits_allocated - comp.emissions
+        new_emissions = float(data.get('emissions', comp.emissions))
+        new_allocated = float(data.get('credits_allocated', comp.credits_allocated))
+        
+        # Adjust balance based on the change in emissions and allocation
+        # This PRESERVES the results of previous trades
+        allocation_change = new_allocated - comp.credits_allocated
+        emissions_change = new_emissions - comp.emissions
+        
+        comp.credits_allocated = new_allocated
+        comp.emissions = new_emissions
+        comp.credits_balance += (allocation_change - emissions_change)
+        
         if data.get('password'): comp.set_password(data.get('password'))
         
         db.session.commit()
@@ -99,6 +108,28 @@ def execute_trade():
     db.session.add(Trade(seller_id=seller.id, buyer_id=buyer.id, amount=amount))
     db.session.commit()
     return jsonify({'message': 'Success'})
+
+@main_bp.route('/trade/undo', methods=['POST'])
+@jwt_required()
+def undo_trade():
+    if get_jwt_identity() != 'admin': return jsonify({'error': 'Admin only'}), 403
+    
+    last_trade = Trade.query.filter_by(status='completed', trade_type='Trade').order_by(Trade.timestamp.desc()).first()
+    if not last_trade: return jsonify({'error': 'Nothing to undo'}), 400
+    
+    seller = Company.query.get(last_trade.seller_id)
+    buyer = Company.query.get(last_trade.buyer_id)
+    
+    # Revert the balances
+    seller.credits_balance += last_trade.amount
+    buyer.credits_balance -= last_trade.amount
+    
+    # Mark as reverted or delete? Let's mark as reverted for audit, but usually delete for simulation
+    # The user wanted a LIFO undo, so we'll delete the record to clean the graph/history
+    db.session.delete(last_trade)
+    db.session.commit()
+    
+    return jsonify({'message': f'Trade undone: {last_trade.amount} CR returned to {seller.id}'})
 
 @main_bp.route('/rankings', methods=['GET'])
 def get_rankings():
