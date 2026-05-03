@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts';
-import { TrendingUp, Award, BarChart2, Activity, Zap } from 'lucide-react';
+import { Building2, ArrowRightLeft, Award, Zap, BarChart2 } from 'lucide-react';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', padding: '12px', border: 'none', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', backdropFilter: 'blur(4px)' }}>
-        <p style={{ fontWeight: 700, marginBottom: '8px', color: '#fff' }}>{label}</p>
+      <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+        <p style={{ fontWeight: 700, marginBottom: '8px', color: '#1e3a8a' }}>{label}</p>
         {payload.map((p, i) => (
-          <p key={i} style={{ fontSize: '0.8rem', color: p.color, margin: '4px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: p.color }}></span>
-            {p.name}: <strong>{p.value} T</strong>
+          <p key={i} style={{ fontSize: '0.8rem', color: p.color, margin: '4px 0', fontWeight: 600 }}>
+            {p.name}: {p.value} T
           </p>
         ))}
       </div>
@@ -22,64 +21,87 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function Dashboard() {
   const [rankings, setRankings] = useState([]);
+  const [stats, setStats] = useState({ total_companies: 0, total_trades: 0, top_company: '...', total_emissions: 0 });
   const [activeTab, setActiveTab] = useState('bar');
 
   useEffect(() => {
-    api.get('/rankings').then(res => setRankings(res.data)).catch(console.error);
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      const [rankRes, statsRes] = await Promise.all([
+        api.get('/rankings'),
+        api.get('/stats')
+      ]);
+      setRankings(rankRes.data);
+      setStats(statsRes.data);
+    } catch (e) { console.error(e); }
+  };
+
+  const statItems = [
+    { label: 'Registered Companies', value: stats.total_companies, sub: 'Stored in Hash Table', icon: Building2, color: '#3b82f6', bg: '#eff6ff' },
+    { label: 'Total Trades', value: stats.total_trades, sub: 'Logged in Queue', icon: ArrowRightLeft, color: '#10b981', bg: '#ecfdf5' },
+    { label: 'Top Eco Company', value: stats.top_company, sub: 'Ranked by AVL Tree', icon: Award, color: '#f59e0b', bg: '#fffbeb' },
+    { label: 'Total Emissions (T)', value: stats.total_emissions, sub: 'Across all companies', icon: Zap, color: '#8b5cf6', bg: '#f5f3ff' },
+  ];
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <div className="stats-grid">
-        <div className="stat-card" style={{ borderLeft: '4px solid #10b981' }}>
-          <div className="stat-icon" style={{ backgroundColor: '#ecfdf5', color: '#10b981' }}><TrendingUp size={20} /></div>
-          <div className="stat-info">
-            <div className="stat-label">Market Leader</div>
-            <div className="stat-value" style={{ color: '#0f172a' }}>{rankings[0]?.name || '...'}</div>
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+        {statItems.map((item, i) => (
+          <div key={i} className="stat-card" style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '16px', border: '1px solid #f1f5f9', display: 'flex', gap: '16px', alignItems: 'center', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.1)' }}>
+            <div style={{ backgroundColor: item.bg, color: item.color, padding: '12px', borderRadius: '12px' }}>
+              <item.icon size={24} />
+            </div>
+            <div>
+              <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 600 }}>{item.label}</div>
+              <div style={{ color: '#0f172a', fontSize: '1.25rem', fontWeight: 800, margin: '2px 0' }}>{item.value}</div>
+              <div style={{ color: '#94a3b8', fontSize: '0.65rem' }}>{item.sub}</div>
+            </div>
           </div>
-        </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid #3b82f6' }}>
-          <div className="stat-icon" style={{ backgroundColor: '#eff6ff', color: '#3b82f6' }}><Award size={20} /></div>
-          <div className="stat-info">
-            <div className="stat-label">System Status</div>
-            <div className="stat-value" style={{ color: '#0f172a' }}>Operational</div>
-          </div>
-        </div>
+        ))}
       </div>
 
-      <div className="card">
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="card" style={{ padding: '24px', backgroundColor: '#fff', borderRadius: '20px', border: '1px solid #f1f5f9' }}>
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
-            <div className="card-title" style={{ color: '#0f172a' }}><BarChart2 size={18} /> Environmental Performance</div>
-            <div className="card-subtitle">Detailed comparison of carbon metrics</div>
+            <div className="card-title" style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChart2 size={20} /> Environmental Impact Analysis
+            </div>
+            <div className="card-subtitle" style={{ fontSize: '0.8rem', color: '#64748b' }}>Emissions vs Allocated Credits per Company</div>
           </div>
-          <div className="pill-tabs">
-            <button className={`pill-tab ${activeTab === 'bar' ? 'active' : ''}`} onClick={() => setActiveTab('bar')}>Bar View</button>
-            <button className={`pill-tab ${activeTab === 'radar' ? 'active' : ''}`} onClick={() => setActiveTab('radar')}>Radar View</button>
+          <div className="pill-tabs" style={{ background: '#f8fafc', padding: '4px', borderRadius: '10px' }}>
+            <button className={`pill-tab ${activeTab === 'bar' ? 'active' : ''}`} onClick={() => setActiveTab('bar')}>Bar Chart</button>
+            <button className={`pill-tab ${activeTab === 'radar' ? 'active' : ''}`} onClick={() => setActiveTab('radar')}>Radar Chart</button>
           </div>
         </div>
 
-        <div style={{ height: 450, marginTop: 30 }}>
+        <div style={{ height: 400 }}>
           <ResponsiveContainer width="100%" height="100%">
             {activeTab === 'bar' ? (
-              <BarChart data={rankings} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+              <BarChart data={rankings} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: 20 }} />
-                <Bar dataKey="credits_allocated" name="Allocated" fill="#1e293b" barSize={25} radius={[6, 6, 0, 0]} />
-                <Bar dataKey="emissions" name="Emissions" fill="#f43f5e" barSize={25} radius={[6, 6, 0, 0]} />
-                <Bar dataKey="credits_balance" name="Balance" fill="#10b981" barSize={25} radius={[6, 6, 0, 0]} />
+                <Legend 
+                  iconType="circle" 
+                  wrapperStyle={{ paddingTop: '30px' }} 
+                  formatter={(value) => <span style={{ color: '#475569', fontSize: '0.85rem', fontWeight: 600 }}>{value}</span>}
+                />
+                <Bar dataKey="credits_allocated" name="Allocated" fill="#1e3a8a" barSize={15} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="credits_balance" name="Balance" fill="#0ea5e9" barSize={15} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="emissions" name="Emissions" fill="#3b82f6" barSize={15} radius={[4, 4, 0, 0]} />
               </BarChart>
             ) : (
               <RadarChart data={rankings} outerRadius="80%">
                 <PolarGrid stroke="#e2e8f0" />
                 <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} />
-                <Radar name="Emissions" dataKey="emissions" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.5} />
-                <Radar name="Allocated" dataKey="credits_allocated" stroke="#1e293b" fill="#1e293b" fillOpacity={0.3} />
+                <Radar name="Emissions" dataKey="emissions" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.5} />
+                <Radar name="Allocated" dataKey="credits_allocated" stroke="#1e3a8a" fill="#1e3a8a" fillOpacity={0.3} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend />
+                <Legend formatter={(value) => <span style={{ color: '#475569', fontSize: '0.85rem', fontWeight: 600 }}>{value}</span>} />
               </RadarChart>
             )}
           </ResponsiveContainer>

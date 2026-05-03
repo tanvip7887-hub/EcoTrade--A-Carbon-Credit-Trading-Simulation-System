@@ -131,3 +131,24 @@ def get_history():
     for t in trades:
         history_queue.enqueue({'seller': t.seller_id, 'buyer': t.buyer_id, 'amount': t.amount, 'status': t.status, 'type': t.trade_type, 'timestamp': t.timestamp.isoformat()})
     return jsonify(history_queue.get_all())
+
+@main_bp.route('/stats', methods=['GET'])
+def get_stats():
+    companies = Company.query.all()
+    trades = Trade.query.filter_by(status='completed', trade_type='Trade').all()
+    
+    total_companies = len(companies)
+    total_trades = len(trades)
+    total_emissions = sum(c.emissions for c in companies)
+    
+    # Use AVL Tree to find the top company
+    ranking_tree = AVLTree()
+    for c in companies: ranking_tree.add(c)
+    top_c = ranking_tree.get_sorted()[-1] if companies else None
+    
+    return jsonify({
+        'total_companies': total_companies,
+        'total_trades': total_trades,
+        'total_emissions': int(total_emissions),
+        'top_company': top_c.name if top_c else 'N/A'
+    })
