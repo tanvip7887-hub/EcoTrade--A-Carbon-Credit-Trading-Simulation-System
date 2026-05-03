@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { Building2, ShieldCheck, Leaf, BarChart3, ArrowRightLeft, Info } from 'lucide-react';
+import { Building2, ShieldCheck, Leaf, BarChart3, ArrowRightLeft, Info, UserPlus } from 'lucide-react';
 import api from '../api';
 
 export default function Login({ onLogin }) {
-  const [tab, setTab] = useState('company');
+  const [view, setView] = useState('login'); // 'login' or 'register'
+  const [tab, setTab] = useState('company'); // 'company' or 'admin'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
+    setError(''); setSuccess('');
     setLoading(true);
 
     try {
@@ -21,11 +24,8 @@ export default function Login({ onLogin }) {
       });
       
       const { access_token, role, company } = res.data;
-      
-      // Save token for future API calls
       localStorage.setItem('token', access_token);
       
-      // Update app state
       onLogin({ 
         role: role, 
         id: role === 'admin' ? 'admin' : company.company_id,
@@ -33,7 +33,28 @@ export default function Login({ onLogin }) {
       });
       
     } catch (err) {
-      setError(err.response?.data?.msg || 'Login failed. Check your ID and password.');
+      setError(err.response?.data?.msg || 'Login failed. Check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError(''); setSuccess('');
+    setLoading(true);
+
+    try {
+      await api.post('/auth/register', {
+        company_id: username,
+        name: name,
+        password: password
+      });
+      setSuccess('Account created! You can now log in.');
+      setView('login');
+      setUsername(''); setPassword(''); setName('');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Registration failed. ID might be taken.');
     } finally {
       setLoading(false);
     }
@@ -82,63 +103,125 @@ export default function Login({ onLogin }) {
 
       <div className="login-right">
         <div className="login-card">
-          <h2>Welcome back</h2>
-          <p>Sign in to your EcoTrade account</p>
+          {view === 'login' ? (
+            <>
+              <h2>Welcome back</h2>
+              <p>Sign in to your EcoTrade account</p>
 
-          <div className="login-tabs">
-            <div className={`login-tab ${tab === 'company' ? 'active' : ''}`} onClick={() => { setTab('company'); setError(''); }}>
-              Company Login
-            </div>
-            <div className={`login-tab ${tab === 'admin' ? 'active' : ''}`} onClick={() => { setTab('admin'); setError(''); }}>
-              Admin Login
-            </div>
-          </div>
+              <div className="login-tabs">
+                <div className={`login-tab ${tab === 'company' ? 'active' : ''}`} onClick={() => { setTab('company'); setError(''); }}>
+                  Company Login
+                </div>
+                <div className={`login-tab ${tab === 'admin' ? 'active' : ''}`} onClick={() => { setTab('admin'); setError(''); }}>
+                  Admin Login
+                </div>
+              </div>
 
-          {error && (
-            <div className="alert alert-error">
-              <Info size={16} /> {error}
-            </div>
+              {error && <div className="alert alert-error"><Info size={16} /> {error}</div>}
+              {success && <div className="alert alert-success" style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}><CheckCircle size={16} /> {success}</div>}
+
+              <form onSubmit={handleLogin}>
+                <div className="form-group" style={{ marginBottom: 14 }}>
+                  <label className="form-label">{tab === 'admin' ? 'Admin Username' : 'Company ID'}</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder={tab === 'admin' ? 'e.g. admin' : 'e.g. C001'}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 20 }}>
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
+                  <ShieldCheck size={17} />
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+              </form>
+
+              {tab === 'company' && (
+                <div style={{ textAlign: 'center', marginTop: 24, fontSize: '0.85rem', color: '#64748b' }}>
+                  Don't have an account?{' '}
+                  <button onClick={() => { setView('register'); setError(''); }} style={{ color: '#1e3a8a', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
+                    Register Company
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <h2>Create Account</h2>
+              <p>Register your company in the registry</p>
+
+              {error && <div className="alert alert-error"><Info size={16} /> {error}</div>}
+
+              <form onSubmit={handleRegister} style={{ marginTop: 20 }}>
+                <div className="form-group" style={{ marginBottom: 14 }}>
+                  <label className="form-label">Company ID</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. C007"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 14 }}>
+                  <label className="form-label">Company Name</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. GreenTech Industries"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 20 }}>
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Create a password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary btn-full" style={{ background: '#10b981' }} disabled={loading}>
+                  <UserPlus size={17} />
+                  {loading ? 'Creating Account...' : 'Register Company'}
+                </button>
+              </form>
+
+              <div style={{ textAlign: 'center', marginTop: 24, fontSize: '0.85rem', color: '#64748b' }}>
+                Already have an account?{' '}
+                <button onClick={() => { setView('login'); setError(''); }} style={{ color: '#1e3a8a', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
+                  Back to Login
+                </button>
+              </div>
+            </>
           )}
-
-          <form onSubmit={handleLogin}>
-            <div className="form-group" style={{ marginBottom: 14 }}>
-              <label className="form-label">{tab === 'admin' ? 'Admin Username' : 'Company ID'}</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder={tab === 'admin' ? 'e.g. admin' : 'e.g. C001'}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group" style={{ marginBottom: 20 }}>
-              <label className="form-label">Password</label>
-              <input
-                type="password"
-                className="form-control"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-              <ShieldCheck size={17} />
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          <div className="login-hint">
-            <Info size={15} style={{ flexShrink: 0, marginTop: 1 }} />
-            <span>
-              {tab === 'admin'
-                ? 'Admin credentials: admin / admin'
-                : 'Use your Company ID (e.g. C001) and Password'}
-            </span>
-          </div>
         </div>
       </div>
     </div>
   );
 }
+
+const CheckCircle = ({ size }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
+  </svg>
+);
