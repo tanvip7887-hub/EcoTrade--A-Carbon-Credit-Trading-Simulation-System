@@ -71,7 +71,13 @@ export default function Companies() {
       });
       setMsg(`Success: ${formData.id} has been processed.`);
       fetchCompanies();
-    } catch (err) { setErr(err.response?.data?.error || 'Database operation failed.'); }
+    } catch (err) { 
+      if (err.response?.status === 401) {
+        setErr('Session Expired: Please logout and login again with admin / admin.');
+      } else {
+        setErr(err.response?.data?.error || 'Database operation failed.'); 
+      }
+    }
     setLoading(false);
   };
 
