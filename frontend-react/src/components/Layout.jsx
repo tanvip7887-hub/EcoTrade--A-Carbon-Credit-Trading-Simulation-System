@@ -17,9 +17,11 @@ export default function Layout({ user, onLogout }) {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/trading', label: 'Trade Credits', icon: ArrowRightLeft },
     { to: '/history', label: 'Trade History', icon: History },
-    { to: '/network', label: 'Network Graph', icon: Network },
   ];
-  if (user.role === 'admin') links.push({ to: '/companies', label: 'Companies', icon: Building2 });
+  if (user.role === 'admin') {
+    links.push({ to: '/network', label: 'Network Graph', icon: Network });
+    links.push({ to: '/companies', label: 'Companies', icon: Building2 });
+  }
 
   const initials = user.role === 'admin' ? 'AD' : user.id?.slice(0, 2).toUpperCase();
 

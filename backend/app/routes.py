@@ -114,15 +114,19 @@ def get_rankings():
 @main_bp.route('/network', methods=['GET'])
 def get_network():
     companies = Company.query.all()
-    trades = Trade.query.all()
+    # Only show active, non-reverted trades in the network graph
+    trades = Trade.query.filter_by(status='completed', trade_type='Trade').all()
     trade_network = Graph()
     for c in companies: trade_network.add_node(c.id)
     for t in trades: trade_network.add_edge(t.seller_id, t.buyer_id, t.amount)
-    return jsonify({'nodes': [{'id': c.id, 'label': c.name} for c in companies], 'edges': trade_network.get_edges()})
+    return jsonify({
+        'nodes': [{'id': c.id, 'label': c.name} for c in companies],
+        'edges': trade_network.get_edges()
+    })
 
 @main_bp.route('/history', methods=['GET'])
 def get_history():
-    trades = Trade.query.order_by(Trade.timestamp.asc()).all()
+    trades = Trade.query.order_by(Trade.timestamp.desc()).all()
     history_queue = Queue()
     for t in trades:
         history_queue.enqueue({'seller': t.seller_id, 'buyer': t.buyer_id, 'amount': t.amount, 'status': t.status, 'type': t.trade_type, 'timestamp': t.timestamp.isoformat()})
