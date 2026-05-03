@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { History as HistoryIcon, Search, CheckCircle, RotateCcw, Filter } from 'lucide-react';
+import api from '../api';
+import { History as HistoryIcon, Search, CheckCircle, RotateCcw, ArrowRight } from 'lucide-react';
 
 export default function History() {
   const [history, setHistory] = useState([]);
@@ -9,7 +9,7 @@ export default function History() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('http://127.0.0.1:5000/api/history').then(r => {
+    api.get('/history').then(r => {
       setHistory(r.data);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -22,24 +22,22 @@ export default function History() {
   });
 
   return (
-    <div>
+    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
       <div className="card">
-        <div className="card-header">
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div className="card-title"><HistoryIcon size={18} /> Transaction Logs</div>
-            <div className="card-subtitle">Data Structure: Queue (FIFO) — most recent trades appear last</div>
+            <div className="card-subtitle">Data Structure: Queue (FIFO) — audit trail of all operations</div>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span className="badge badge-blue">{filtered.length} records</span>
-          </div>
+          <span className="badge badge-blue">{filtered.length} records</span>
         </div>
 
-        {/* Search & Filter */}
-        <div className="filter-bar">
-          <div className="search-input-wrap">
-            <Search size={15} className="search-icon" />
+        <div className="filter-bar" style={{ display: 'flex', gap: 16, marginBottom: 20, padding: '0 10px' }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
-              className="search-input"
+              className="form-control"
+              style={{ paddingLeft: 38 }}
               placeholder="Search by company ID..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -55,45 +53,38 @@ export default function History() {
         </div>
 
         {loading ? (
-          <p style={{ color: '#64748b', padding: '20px 0' }}>Loading...</p>
-        ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <HistoryIcon size={40} />
-            <h3>No Records Found</h3>
-            <p>No trade history matches your current filter.</p>
-          </div>
+          <p style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>Loading logs...</p>
         ) : (
-          <div className="table-wrapper">
-            <table>
+          <div className="table-container">
+            <table className="table">
               <thead>
                 <tr>
-                  <th>#</th>
                   <th>Type</th>
-                  <th>Seller ID</th>
-                  <th>Buyer ID</th>
-                  <th>Amount (Credits)</th>
+                  <th>Seller</th>
+                  <th>Buyer</th>
+                  <th>Amount</th>
                   <th>Status</th>
+                  <th>Timestamp</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((h, i) => (
                   <tr key={i}>
-                    <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{i + 1}</td>
                     <td>
-                      {h.type === 'Undo'
-                        ? <span className="badge badge-orange" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><RotateCcw size={11} /> Undo</span>
-                        : <span className="badge badge-blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowRightLeft size={11} /> Trade</span>
+                      {h.type === 'Undo' 
+                        ? <span className="badge badge-orange"><RotateCcw size={11} /> Undo</span>
+                        : <span className="badge badge-blue"><ArrowRight size={11} /> Trade</span>
                       }
                     </td>
                     <td style={{ fontWeight: 600 }}>{h.seller}</td>
                     <td style={{ fontWeight: 600 }}>{h.buyer}</td>
-                    <td><strong>{h.amount}</strong> CR</td>
+                    <td><strong>{h.amount}</strong> Credits</td>
                     <td>
-                      <span className={`badge ${h.status === 'completed' ? 'badge-green' : 'badge-orange'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <CheckCircle size={11} />
-                        {h.status.charAt(0).toUpperCase() + h.status.slice(1)}
+                      <span className={`badge ${h.status === 'completed' ? 'badge-green' : 'badge-orange'}`}>
+                        {h.status === 'completed' ? <CheckCircle size={11} /> : <RotateCcw size={11} />} {h.status}
                       </span>
                     </td>
+                    <td style={{ fontSize: '0.75rem', color: '#64748b' }}>{new Date(h.timestamp).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -102,14 +93,5 @@ export default function History() {
         )}
       </div>
     </div>
-  );
-}
-
-function ArrowRightLeft({ size }) {
-  return (
-    <svg width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M8 3L4 7l4 4" /><path d="M4 7h16" />
-      <path d="M16 21l4-4-4-4" /><path d="M20 17H4" />
-    </svg>
   );
 }
