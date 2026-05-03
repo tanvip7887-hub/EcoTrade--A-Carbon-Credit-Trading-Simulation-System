@@ -65,8 +65,16 @@ export default function Layout({ user, onLogout }) {
       <div className="main-content">
         <header className="header">
           <div className="header-left">
-            <h2>{currentPage.title}</h2>
-            <p>{currentPage.subtitle}</p>
+            <h2>
+              {location.pathname === '/dashboard' 
+                ? (user.role === 'admin' ? 'Government Headquarters' : `${user.name || user.id} Portal`)
+                : currentPage.title}
+            </h2>
+            <p>
+              {location.pathname === '/dashboard'
+                ? (user.role === 'admin' ? 'Strategic oversight of the carbon market' : 'Personalized environmental impact analytics')
+                : currentPage.subtitle}
+            </p>
           </div>
           <div className="header-right">
             <span className="header-badge">
