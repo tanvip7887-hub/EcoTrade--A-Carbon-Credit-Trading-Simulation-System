@@ -40,8 +40,8 @@ def login():
     data = request.json
     company_id = data.get('company_id')
     password = data.get('password')
-    
-    if company_id == 'admin' and password == 'password':
+    print(f"DEBUG: Login attempt for ID: '{company_id}' with Password: '{password}'")
+    if company_id == 'admin' and password == 'admin':
         return jsonify(access_token=create_access_token(identity='admin'), role='admin')
     
     company = Company.query.get(company_id)

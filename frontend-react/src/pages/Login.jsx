@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Building2, ShieldCheck, Leaf, BarChart3, ArrowRightLeft, Info } from 'lucide-react';
-import axios from 'axios';
+import api from '../api';
 
 export default function Login({ onLogin }) {
   const [tab, setTab] = useState('company');
@@ -14,31 +14,28 @@ export default function Login({ onLogin }) {
     setError('');
     setLoading(true);
 
-    if (tab === 'admin') {
-      if (username === 'admin' && password === 'password') {
-        setTimeout(() => { onLogin({ role: 'admin', id: 'admin' }); setLoading(false); }, 400);
-      } else {
-        setLoading(false);
-        setError('Invalid admin credentials. Use admin / password');
-      }
-    } else {
-      try {
-        const res = await axios.get(`http://127.0.0.1:5000/api/companies/${username}`);
-        if (res.data && !res.data.error) {
-          if (password) {
-            setTimeout(() => { onLogin({ role: 'company', id: username, name: res.data.name }); setLoading(false); }, 400);
-          } else {
-            setLoading(false);
-            setError('Please enter a password.');
-          }
-        } else {
-          setLoading(false);
-          setError('Company ID not found.');
-        }
-      } catch (err) {
-        setLoading(false);
-        setError('Company not found or server offline. Try C001.');
-      }
+    try {
+      const res = await api.post('/auth/login', {
+        company_id: username,
+        password: password
+      });
+      
+      const { access_token, role, company } = res.data;
+      
+      // Save token for future API calls
+      localStorage.setItem('token', access_token);
+      
+      // Update app state
+      onLogin({ 
+        role: role, 
+        id: role === 'admin' ? 'admin' : company.company_id,
+        name: role === 'admin' ? 'Administrator' : company.name
+      });
+      
+    } catch (err) {
+      setError(err.response?.data?.msg || 'Login failed. Check your ID and password.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -136,8 +133,8 @@ export default function Login({ onLogin }) {
             <Info size={15} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>
               {tab === 'admin'
-                ? 'Admin credentials: admin / password'
-                : 'Company credentials: C001 / C002 / C003 with any password'}
+                ? 'Admin credentials: admin / admin'
+                : 'Use your Company ID (e.g. C001) and Password'}
             </span>
           </div>
         </div>
