@@ -68,16 +68,16 @@ export default function Dashboard() {
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: 20 }} />
-                <Bar dataKey="credits_allocated" name="Allocated" fill="#0f172a" barSize={25} radius={[6, 6, 0, 0]} />
-                <Bar dataKey="emissions" name="Emissions" fill="#3b82f6" barSize={25} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="credits_allocated" name="Allocated" fill="#1e293b" barSize={25} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="emissions" name="Emissions" fill="#f43f5e" barSize={25} radius={[6, 6, 0, 0]} />
                 <Bar dataKey="credits_balance" name="Balance" fill="#10b981" barSize={25} radius={[6, 6, 0, 0]} />
               </BarChart>
             ) : (
               <RadarChart data={rankings} outerRadius="80%">
                 <PolarGrid stroke="#e2e8f0" />
                 <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} />
-                <Radar name="Emissions" dataKey="emissions" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.5} />
-                <Radar name="Allocated" dataKey="credits_allocated" stroke="#0f172a" fill="#0f172a" fillOpacity={0.3} />
+                <Radar name="Emissions" dataKey="emissions" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.5} />
+                <Radar name="Allocated" dataKey="credits_allocated" stroke="#1e293b" fill="#1e293b" fillOpacity={0.3} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
               </RadarChart>
