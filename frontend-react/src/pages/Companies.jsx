@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { Building2, PlusCircle, Search, CheckCircle, AlertCircle, Eye, Shield, Key, UserCheck } from 'lucide-react';
+import { Building2, PlusCircle, Search, CheckCircle, AlertCircle, Eye, Shield, Key, UserCheck, Activity } from 'lucide-react';
 
 const EcoScoreTag = ({ score }) => {
   const getStyle = (s) => {
@@ -80,11 +80,17 @@ export default function Companies() {
     return !s || c.name.toLowerCase().includes(s) || c.company_id.toLowerCase().includes(s);
   });
 
+  const totals = filtered.reduce((acc, c) => ({
+    emissions: acc.emissions + c.emissions,
+    credits: acc.credits + c.credits_allocated,
+    balance: acc.balance + c.credits_balance
+  }), { emissions: 0, credits: 0, balance: 0 });
+
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <div className="card" style={{ borderTop: '4px solid #0f172a' }}>
+      <div className="card" style={{ borderTop: '4px solid #1e3a8a' }}>
         <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <div className="card-title"><UserCheck size={18} /> Government Credit Allocation</div>
+          <div className="card-title"><UserCheck size={18} /> Government Command Panel</div>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setFormData({ id: '', name: '', password: '', emissions: '', credits: '', industry: 'Tech' })}>Reset Form</button>
         </div>
         
@@ -105,22 +111,38 @@ export default function Companies() {
               <input type="text" className="form-control" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
             </div>
             <div className="form-group">
-              <label className="form-label">Official Credit Allocation (Tons)</label>
+              <label className="form-label">Credit Allocation (Tons)</label>
               <input type="number" className="form-control" value={formData.credits} onChange={e => setFormData({ ...formData, credits: e.target.value })} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Current Emissions (Tons)</label>
+              <input type="number" className="form-control" value={formData.emissions} onChange={e => setFormData({ ...formData, emissions: e.target.value })} required />
             </div>
             <div className="form-group">
               <label className="form-label">Assign Password</label>
               <input type="text" className="form-control" placeholder="Create or Update Password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
             </div>
           </div>
-          <button type="submit" className="btn btn-primary" style={{ marginTop: 24, padding: '12px 24px' }} disabled={loading}>
-            {loading ? 'Processing...' : 'Authorize & Allocate Credits'}
+          <button type="submit" className="btn btn-primary" style={{ marginTop: 24, padding: '12px 24px', background: '#1e3a8a' }} disabled={loading}>
+            {loading ? 'Syncing...' : 'Authorize & Synchronize Records'}
           </button>
         </form>
       </div>
 
       <div className="card">
-        <div className="card-header"><Building2 size={18} /> Authorized Entity Registry</div>
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="card-title"><Building2 size={18} /> Authorized Entity Registry</div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Search Filter:</span>
+            <input 
+              type="text" 
+              placeholder="Filter table..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)}
+              style={{ border: 'none', borderBottom: '1px solid #e2e8f0', fontSize: '0.8rem', outline: 'none' }}
+            />
+          </div>
+        </div>
         <div className="table-container">
           <table className="table">
             <thead>
@@ -129,6 +151,7 @@ export default function Companies() {
                 <th>Company Name</th>
                 <th>Compliance Status</th>
                 <th>Emissions</th>
+                <th>Credits</th>
                 <th>Balance</th>
                 <th>Actions</th>
               </tr>
@@ -140,6 +163,7 @@ export default function Companies() {
                   <td style={{ fontWeight: 600 }}>{c.name}</td>
                   <td><EcoScoreTag score={c.eco_score} /></td>
                   <td>{c.emissions} T</td>
+                  <td>{c.credits_allocated} T</td>
                   <td style={{ color: c.credits_balance >= 0 ? '#10b981' : '#dc2626', fontWeight: 700 }}>{c.credits_balance}</td>
                   <td>
                     <button className="btn btn-secondary btn-sm" onClick={() => { setSelectedComp(c); setShowModal(true); }}>
@@ -149,6 +173,15 @@ export default function Companies() {
                 </tr>
               ))}
             </tbody>
+            <tfoot style={{ backgroundColor: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
+              <tr style={{ fontWeight: 800, color: '#1e293b' }}>
+                <td colSpan={3} style={{ textAlign: 'right', paddingRight: '24px' }}>REGISTRY TOTALS</td>
+                <td>{totals.emissions} T</td>
+                <td>{totals.credits} T</td>
+                <td style={{ color: totals.balance >= 0 ? '#10b981' : '#dc2626' }}>{totals.balance}</td>
+                <td></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -177,8 +210,12 @@ export default function Companies() {
                 <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Allocated Credits</span>
                 <span style={{ fontWeight: 700, color: '#0f172a' }}>{selectedComp.credits_allocated} T</span>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: '#f8fafc', borderRadius: 8 }}>
+                <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Current Emissions</span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{selectedComp.emissions} T</span>
+              </div>
             </div>
-            <button className="btn btn-primary" style={{ width: '100%', marginTop: 32, padding: '14px' }} onClick={() => setShowModal(false)}>Close Passport</button>
+            <button className="btn btn-primary" style={{ width: '100%', marginTop: 32, padding: '14px', background: '#1e3a8a' }} onClick={() => setShowModal(false)}>Close Passport</button>
           </div>
         </div>
       )}
